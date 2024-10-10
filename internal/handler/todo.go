@@ -125,7 +125,8 @@ func (t *todoHandler) Delete(c echo.Context) error {
 			ResponseError{Errors: []Error{{Code: errors.CodeBadRequest, Message: err.Error()}}})
 	}
 
-	if err := t.service.Delete(req.ID); err != nil {
+	todo, err := t.service.Delete(req.ID)
+	if err != nil {
 		if err == model.ErrNotFound {
 			return c.JSON(http.StatusNotFound,
 				ResponseError{Errors: []Error{{Code: errors.CodeNotFound, Message: "todo not found"}}})
@@ -133,7 +134,7 @@ func (t *todoHandler) Delete(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError,
 			ResponseError{Errors: []Error{{Code: errors.CodeInternalServerError, Message: err.Error()}}})
 	}
-	return c.NoContent(http.StatusNoContent)
+	return c.JSON(http.StatusOK, ResponseData{Data: todo})
 }
 
 // FindRequest is the request parameter for finding a todo
@@ -174,31 +175,30 @@ func (t *todoHandler) Find(c echo.Context) error {
 // @Failure	500	{object}	ResponseError
 // @Router		/todos [get]
 func (t *todoHandler) FindAll(c echo.Context) error {
-    var queryParam model.QueryParam
-    if err := c.Bind(&queryParam); err != nil {
-        return c.JSON(http.StatusBadRequest,
-            ResponseError{Errors: []Error{{Code: errors.CodeBadRequest, Message: err.Error()}}})
-    }
+	var queryParam model.QueryParam
+	if err := c.Bind(&queryParam); err != nil {
+		return c.JSON(http.StatusBadRequest,
+			ResponseError{Errors: []Error{{Code: errors.CodeBadRequest, Message: err.Error()}}})
+	}
 
-    // Provide default values for pagination
-    if queryParam.Page <= 0 {
-        queryParam.Page = 1 // Default to page 1
-    }
-    if queryParam.PerPage <= 0 {
-        queryParam.PerPage = 10 // Default to 10 items per page
-    }
+	// Provide default values for pagination
+	if queryParam.Page <= 0 {
+		queryParam.Page = 1 // Default to page 1
+	}
+	if queryParam.PerPage <= 0 {
+		queryParam.PerPage = 10 // Default to 10 items per page
+	}
 
-    res, total, err := t.service.FindAll(&queryParam)
-    if err != nil {
-        return c.JSON(http.StatusInternalServerError,
-            ResponseError{Errors: []Error{{Code: errors.CodeInternalServerError, Message: err.Error()}}})
-    }
+	res, total, err := t.service.FindAll(&queryParam)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError,
+			ResponseError{Errors: []Error{{Code: errors.CodeInternalServerError, Message: err.Error()}}})
+	}
 
-    return c.JSON(http.StatusOK, map[string]interface{}{
-        "data":       res,
-        "total":      total,
-        "page":       queryParam.Page,
-        "per_page":   queryParam.PerPage,
-    })
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"data":     res,
+		"total":    total,
+		"page":     queryParam.Page,
+		"per_page": queryParam.PerPage,
+	})
 }
-

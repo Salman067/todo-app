@@ -1,164 +1,115 @@
 <template>
   <div class="todo-main">
-    <!-- Toast Component -->
-    <div v-if="toast.show" class="toast" :class="toast.type">
-      {{ toast.message }}
-    </div>
     <h1>TODO List</h1>
-    <div v-if="statusMessage" class="status-message">{{ statusMessage }}</div>
     <div class="input-group">
       <button @click="openAddModal">Add Task</button>
     </div>
 
-    <!-- Search Inputs -->
-    <div class="search-group">
-      <input
-        v-model="searchTask"
-        placeholder="Search tasks"
-        @input="searchTodos"
-      />
-      <select v-model="searchStatus" @change="searchTodos">
-        <option value="">All Statuses</option>
-        <option value="created">Created</option>
-        <option value="in-progress">In Progress</option>
-        <option value="done">Done</option>
-      </select>
-    </div>
+    <!-- Use the Toast component -->
+    <Toast :show="toast.show" :message="toast.message" :type="toast.type" />
+    
+    <!-- Search Component -->
+    <SearchControls
+      :searchTask="searchTask"
+      :searchStatus="searchStatus"
+      @updateSearchTask="updateSearchTask"
+      @updateSearchStatus="updateSearchStatus"
+    />
 
-    <table v-if="paginatedTodos.length > 0" class="todo-table">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Task</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="(todo, i) in paginatedTodos" :key="todo.ID">
-          <td>{{ (currentPage - 1) * 10 + i + 1 }}</td>
-          <td>
-            <div
-              :class="{
-                'done-task': todo.Status === 'done',
-                'task-content': true,
-              }"
-            >
-              {{ truncateText(todo.Task) }}
-              <span
-                v-if="todo.Task.length > 50"
-                class="expand-btn"
-                @click.stop="viewTodoDetails(todo.ID)"
-              >
-                ...details
-              </span>
-            </div>
-          </td>
-          <td class="status">
-            <span :class="getStatusClass(todo.Status)">{{
-              getStatusText(todo.Status)
-            }}</span>
-          </td>
-          <td class="buttons">
-            <button
-              :class="{ done: todo.Status === 'done' }"
-              @click="updateStatus(todo)"
-            >
-              ✓
-            </button>
-            <button class="delete-button" @click="deleteTodo(todo.ID)">
-              ✖
-            </button>
-            <button class="view-button" @click="viewTodoDetails(todo.ID)">
-              Details
-            </button>
-            <button class="edit-button" @click="openEditModal(todo)">
-              Edit
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <!-- Task List Component -->
+    <TodoList
+      :paginatedTodos="paginatedTodos"
+      :currentPage="currentPage"
+      @update-status="updateStatus"
+      @delete-todo="handleDeleteTodo"
+      @view-todo-details="handleViewTodoDetails"
+      @edit-todo="openEditModal"
+    />
 
-    <div v-else>
-      <p>No tasks available.</p>
-    </div>
+    <!-- Use the Pagination component -->
+    <Pagination
+      :currentPage="currentPage"
+      :totalPages="totalPages"
+      @page-changed="changePage"
+    />
 
-    <!-- Pagination Controls -->
-    <div class="pagination">
-      <button
-        @click="changePage(currentPage - 1)"
-        :disabled="currentPage === 1"
-      >
-        Previous Page
-      </button>
-      <span>Page {{ currentPage }} / {{ totalPages }}</span>
-      <button
-        @click="changePage(currentPage + 1)"
-        :disabled="currentPage === totalPages"
-      >
-        Next Page
-      </button>
-    </div>
-
-   <!-- Add Task Modal -->
-   <div v-if="isAddModalOpen" class="modal">
-      <div class="modal-content">
-        <h2>Add New Task</h2>
-        <textarea
-          v-model="newTask"
-          placeholder="Enter new task"
-          class="edit-input"
-        ></textarea>
-        <div class="modal-buttons">
-          <button @click="addTodo">Add</button>
-          <button @click="closeAddModal">Cancel</button>
-        </div>
-      </div>
-    </div>
+    <!-- Add Task Modal -->
+    <Modal
+      v-if="isAddModalOpen"
+      :isOpen="isAddModalOpen"
+      title="Add New Task"
+      primaryActionText="Add"
+      closeButtonText="Cancel"
+      @primaryAction="handleAddTodo"
+      @close="closeAddModal"
+    >
+      <textarea
+        v-model="newTask"
+        placeholder="Enter new task"
+        class="edit-input"
+      ></textarea>
+    </Modal>
 
     <!-- Edit Task Modal -->
-    <div v-if="isEditModalOpen" class="modal">
-      <div class="modal-content">
-        <h2>Edit Task</h2>
-        <textarea
-          v-model="editTaskContent"
-          placeholder="Update task"
-          class="edit-input"
-        ></textarea>
-        <div class="modal-buttons">
-          <button @click="saveEditTask">Save</button>
-          <button @click="closeEditModal">Cancel</button>
-        </div>
-      </div>
-    </div>
+    <Modal
+      v-if="isEditModalOpen"
+      :isOpen="isEditModalOpen"
+      title="Edit Task"
+      primaryActionText="Save"
+      closeButtonText="Cancel"
+      @primaryAction="saveEditTask"
+      @close="closeEditModal"
+    >
+      <textarea
+        v-model="editTaskContent"
+        placeholder="Update task"
+        class="edit-input"
+      ></textarea>
+    </Modal>
 
     <!-- Modal to Display Todo Details -->
-    <div v-if="selectedTodo" class="modal">
-      <div class="modal-content">
-        <h2>Task Details</h2>
-        <p><strong>Task:</strong> {{ selectedTodo.Task }}</p>
-        <p>
-          <strong>Status:</strong>
-          <span :class="getStatusClass(selectedTodo.Status)">{{
-            getStatusText(selectedTodo.Status)
-          }}</span>
-        </p>
-        <p>
-          <strong>Created At:</strong> {{ formatDate(selectedTodo.CreatedAt) }}
-        </p>
-        <p>
-          <strong>Updated At:</strong> {{ formatDate(selectedTodo.UpdatedAt) }}
-        </p>
-        <button @click="closeTodoDetails">Close</button>
-      </div>
-    </div>
-
+    <Modal
+      v-if="selectedTodo"
+      :isOpen="!!selectedTodo"
+      title="Task Details"
+      primaryActionText="Close"
+      :closeButtonText="''"
+      @primaryAction="closeTodoDetails"
+    >
+      <p><strong>Task:</strong> {{ selectedTodo.Task }}</p>
+      <p>
+        <strong>Status:</strong>
+        <span :class="getStatusClass(selectedTodo.Status)">
+          {{ getStatusText(selectedTodo.Status) }}
+        </span>
+      </p>
+      <p>
+        <strong>Created At:</strong> {{ formatDate(selectedTodo.CreatedAt) }}
+      </p>
+      <p>
+        <strong>Updated At:</strong> {{ formatDate(selectedTodo.UpdatedAt) }}
+      </p>
+    </Modal>
   </div>
 </template>
 
 <script>
+import Toast from "../components/Toast.vue";
+import Pagination from "../components/Pagination.vue";
+import SearchControls from "../components/SearchControls.vue";
+import TaskList from "../components/TodoList.vue";
+import Modal from "../components/Modal.vue";
+import { fetchTodos, addTodo, editTodo, updateTodoStatus, deleteTodo, viewTodoDetails} from "../services/api";
+
 export default {
+  components: {
+    Toast,
+    Pagination,
+    SearchControls,
+    TaskList,
+    Modal,
+  },
+
   data() {
     return {
       newTask: "",
@@ -170,18 +121,19 @@ export default {
       currentPage: 1,
       perPage: 10,
       totalTodos: 0,
-      isAddModalOpen: false,
       toast: {
         show: false,
         message: "",
         type: "success",
         timeout: null,
       },
-      editTaskContent: '',
+      isAddModalOpen: false,
+      editTaskContent: "",
       editTaskId: null,
       isEditModalOpen: false,
     };
   },
+  
   computed: {
     paginatedTodos() {
       return this.todos;
@@ -191,7 +143,7 @@ export default {
     },
   },
   mounted() {
-    this.fetchTodos();
+    this.getTodos();
   },
   methods: {
     openAddModal() {
@@ -208,7 +160,7 @@ export default {
     },
     closeEditModal() {
       this.isEditModalOpen = false;
-      this.editTaskContent = '';
+      this.editTaskContent = "";
       this.editTaskId = null;
     },
     showToast(message, type = "success", duration = 2000) {
@@ -220,219 +172,34 @@ export default {
         this.toast.show = false;
       }, duration);
     },
-    async fetchTodos() {
-      try {
-        const params = new URLSearchParams({
-          page: this.currentPage.toString(),
-          per_page: this.perPage.toString(),
-        });
 
-        if (this.searchTask.trim()) {
-          params.append("task", this.searchTask.trim());
-        }
-
-        if (this.searchStatus) {
-          params.append("status", this.searchStatus);
-        }
-
-        const url = `/api/v1/todos?${params.toString()}`;
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error(
-            `Failed to get todo list. statusCode: ${response.status}`
-          );
-        }
-        const data = await response.json();
-        this.todos = data.data;
-        this.totalTodos = data.total;
-        this.currentPage = data.page;
-        this.perPage = data.per_page;
-      } catch (error) {
-        console.error("Error fetching todos:", error);
-        this.showToast("Failed to retrieve tasks", "error");
-      }
-    },
-    async addTodo() {
-      if (this.newTask.trim() === "") return;
-
-      try {
-        const response = await fetch("/api/v1/todos", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            task: this.newTask,
-            Status: "created",
-          }),
-        });
-
-        if (!response.ok)
-          throw new Error(
-            `Failed to create todo. statusCode: ${response.status}`
-          );
-
-        this.newTask = "";
-        this.showToast("Task added successfully", "success");
-        this.fetchTodos();
-        this.closeAddModal();
-      } catch (error) {
-        console.error("Error creating todo:", error);
-        this.showToast("Failed to create task", "error");
-      }
-    },
-    async saveEditTask() {
-      if (!this.editTaskContent.trim()) {
-        this.statusMessage = 'Please enter a task.';
-        return;
-      }
-
-      try {
-        const response = await fetch(`/api/v1/todos/${this.editTaskId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            task: this.editTaskContent,
-          }),
-        });
-
-        if (!response.ok)
-          throw new Error(
-            `Failed to edit todo. statusCode: ${response.status}`
-          );
-
-        this.showToast('Task updated successfully', 'success');
-        this.fetchTodos();
-        this.closeEditModal();
-      } catch (error) {
-        console.error('Error editing task:', error.message);
-        this.showToast('Failed to update task', 'error');
-      }
-    },
     enableEdit(todo) {
       todo.isEditing = true;
     },
-    async editTodo(todo) {
-      if (!todo.Task.trim()) {
-        this.statusMessage = "Please enter a task.";
-        return;
-      }
 
-      todo.isEditing = false;
-
-      try {
-        const response = await fetch(`/api/v1/todos/${todo.ID}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            task: todo.Task,
-          }),
-        });
-
-        if (!response.ok)
-          throw new Error(
-            `Failed to edit todo. statusCode: ${response.status}`
-          );
-        this.showToast("Task edited successfully", "success");
-        this.fetchTodos();
-      } catch (error) {
-        console.error("Error editing todo:", error);
-        this.showToast("Failed to edit task", "error");
-      }
-    },
     cancelEdit(todo) {
       todo.isEditing = false;
     },
-    async updateStatus(todo) {
-      try {
-        const statuses = ["created", "in-progress", "done"];
-        const currentIndex = statuses.indexOf(todo.Status);
-        const nextIndex = (currentIndex + 1) % statuses.length;
-        const nextStatus = statuses[nextIndex];
 
-        const response = await fetch(`/api/v1/todos/${todo.ID}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            Status: nextStatus,
-          }),
-        });
-
-        if (!response.ok)
-          throw new Error(
-            `Failed to update todo Status. statusCode: ${response.status}`
-          );
-        this.showToast("Task status updated", "success");
-        this.fetchTodos();
-      } catch (error) {
-        console.error("Error updating todo Status:", error);
-        this.showToast( "Failed to update status", "error" );
-      }
-    },
-    async deleteTodo(id) {
-      try {
-        const response = await fetch(`/api/v1/todos/${id}`, {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (!response.ok)
-          throw new Error(
-            `Failed to delete todo. statusCode: ${response.status}`
-          );
-        this.showToast( "Task deleted successfully", "success" );
-        if (this.todos.length === 1 && this.currentPage > 1) {
-          this.changePage(this.currentPage - 1);
-        } else {
-          this.fetchTodos();
-        }
-      } catch (error) {
-        console.error("Error deleting todo:", error);
-        this.showToast(  "Failed to delete task", "error" );
-      }
-    },
-    async viewTodoDetails(id) {
-      try {
-        const response = await fetch(`/api/v1/todos/${id}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (!response.ok)
-          throw new Error(
-            `Failed to fetch todo details. statusCode: ${response.status}`
-          );
-
-        const data = await response.json();
-        this.selectedTodo = data.data;
-      } catch (error) {
-        console.error("Error fetching todo details:", error);
-        this.showToast(  "Failed to retrieve task details", "error" );
-      }
-    },
     closeTodoDetails() {
       this.selectedTodo = null;
     },
+
+    updateSearchTask(newValue) {
+      this.searchTask = newValue;
+      this.searchTodos();
+    },
+
+    updateSearchStatus(newValue) {
+      this.searchStatus = newValue;
+      this.searchTodos();
+    },
+
     searchTodos() {
       this.currentPage = 1;
-      this.fetchTodos();
+      this.getTodos();
     },
-    async changePage(page) {
-      if (page >= 1 && page <= this.totalPages) {
-        this.currentPage = page;
-        await this.fetchTodos();
-      }
-    },
+
     formatDate(dateString) {
       const options = {
         year: "numeric",
@@ -444,9 +211,11 @@ export default {
       };
       return new Date(dateString).toLocaleString("en-US", options);
     },
+
     truncateText(text, length = 50) {
       return text.length > length ? text.slice(0, length) : text;
     },
+
     getStatusClass(status) {
       return {
         "status-created": status === "created",
@@ -454,6 +223,7 @@ export default {
         "status-done": status === "done",
       };
     },
+
     getStatusText(status) {
       const statusTexts = {
         created: "Created",
@@ -461,6 +231,80 @@ export default {
         done: "Done",
       };
       return statusTexts[status] || status;
+    },
+
+    async changePage(page) {
+      if (page >= 1 && page <= this.totalPages) {
+        this.currentPage = page;
+        await this.getTodos();
+      }
+    },
+
+    async getTodos() {
+      try {
+        const data = await fetchTodos(this.currentPage, this.perPage, this.searchTask, this.searchStatus);
+        this.todos = data.data;
+        this.totalTodos = data.total;
+        this.currentPage = data.page;
+        this.perPage = data.per_page;
+      } catch (error) {
+        this.showToast("Failed to retrieve tasks", "error");
+      }
+    },
+
+    async handleAddTodo() {
+      try {
+        await addTodo(this.newTask);
+        this.newTask = "";
+        this.showToast("Task added successfully", "success");
+        this.getTodos(); 
+        this.closeAddModal();
+      } catch (error) {
+        this.showToast("Failed to create task", "error");
+      }
+    },
+
+    async saveEditTask() {
+      try {
+        await editTodo(this.editTaskId, this.editTaskContent);
+        this.showToast("Task updated successfully", "success");
+        this.getTodos(); 
+        this.closeEditModal();
+      } catch (error) {
+        this.showToast("Failed to update task", "error");
+      }
+    },
+
+    async updateStatus(todo) {
+      try {
+        await updateTodoStatus(todo);
+        this.showToast("Task status updated", "success");
+        this.getTodos(); 
+      } catch (error) {
+        this.showToast("Failed to update status", "error");
+      }
+    },
+
+    async handleDeleteTodo(id) {
+      try {
+        await deleteTodo(id);
+        this.showToast("Task deleted successfully", "success");
+        if (this.todos.length === 1 && this.currentPage > 1) {
+          this.changePage(this.currentPage - 1); 
+        } else {
+          this.getTodos(); 
+        }
+      } catch (error) {
+        this.showToast("Failed to delete task", "error");
+      }
+    },
+
+    async handleViewTodoDetails(id) {
+      try {
+        this.selectedTodo = await viewTodoDetails(id);
+      } catch (error) {
+        this.showToast("Failed to retrieve task details", "error");
+      }
     },
   },
 };
@@ -499,72 +343,10 @@ button {
   transition: background-color 0.3s;
 }
 
-.buttons button {
-  margin-right: 3px;
-}
 button:hover {
   background-color: #0056b3;
 }
-button.done {
-  background-color: #28a745;
-}
-button.delete-button {
-  background-color: #dc3545;
-}
-button.view-button {
-  background-color: #17a2b8;
-}
-.status-message {
-  color: #dc3545;
-  margin-bottom: 10px;
-}
-.done-task {
-  text-decoration: line-through;
-  color: #6c757d;
-}
-.pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-top: 20px;
-}
-.pagination button {
-  margin: 0 10px;
-}
-.todo-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 20px;
-  table-layout: fixed;
-}
 
-.todo-table th,
-.todo-table td {
-  border: 1px solid #ddd;
-  padding: 12px;
-  text-align: center;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-}
-.todo-table th {
-  background-color: #f8f9fa;
-  font-weight: bold;
-}
-
-.todo-table tr:nth-child(even) {
-  background-color: #f2f2f2;
-}
-
-.todo-table th,
-.todo-table td {
-  width: 25%;
-}
-.task-content {
-  max-width: 300px;
-  white-space: normal;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 .expand-btn {
   color: #007bff;
   cursor: pointer;
@@ -574,28 +356,6 @@ button.view-button {
   text-decoration: underline;
 }
 
-.modal-buttons button{
-  margin-right: 10px;
-}
-.modal {
-  position: fixed;
-  z-index: 1;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-  background-color: rgba(0, 0, 0, 0.4);
-}
-.modal-content {
-  background-color: #fefefe;
-  margin: 15% auto;
-  padding: 20px;
-  border: 1px solid #888;
-  width: 80%;
-  max-width: 600px;
-  border-radius: 8px;
-}
 .status-created {
   background-color: #ffc107;
   color: #000;
@@ -621,25 +381,5 @@ button.view-button {
   width: 100%;
   min-height: 60px;
   resize: vertical;
-}
-
-.toast {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  padding: 10px 20px;
-  border-radius: 4px;
-  color: white;
-  font-weight: bold;
-  z-index: 1000;
-  transition: opacity 0.3s ease;
-}
-
-.toast.success {
-  background-color: #28a745;
-}
-
-.toast.error {
-  background-color: #dc3545;
 }
 </style>

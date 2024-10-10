@@ -12,7 +12,7 @@ import (
 type Todo interface {
 	Create(task string) (*model.Todo, error)
 	Update(id int, task string, status model.Status) (*model.Todo, error)
-	Delete(id int) error
+	Delete(id int) (*model.Todo, error)
 	Find(id int) (*model.Todo, error)
 	FindAll(queryParam *model.QueryParam) ([]*model.Todo, int64, error)
 }
@@ -66,11 +66,15 @@ func (t *todo) Update(id int, task string, status model.Status) (*model.Todo, er
 	return currentTodo, nil
 }
 
-func (t *todo) Delete(id int) error {
-	if err := t.todoRepository.Delete(id); err != nil {
-		return err
+func (t *todo) Delete(id int) (*model.Todo, error) {
+	currentTodo, err := t.Find(id)
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	if err := t.todoRepository.Delete(id); err != nil {
+		return nil, err
+	}
+	return currentTodo, nil
 }
 
 func (t *todo) Find(id int) (*model.Todo, error) {
