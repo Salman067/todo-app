@@ -16,6 +16,10 @@ type TodoHandler interface {
 	Delete(c echo.Context) error
 	Find(c echo.Context) error
 	FindAll(c echo.Context) error
+	FindStatusList(c echo.Context) error
+	FindAllTasksWithoutPagination(c echo.Context) error
+	handleError(c echo.Context, err error) error
+	fetchTodos(c echo.Context, queryFunc func(*model.QueryParam) ([]*model.Todo, int64, error)) error
 }
 
 type todoHandler struct {
@@ -28,11 +32,6 @@ func NewTodo(s service.Todo) TodoHandler {
 	return &todoHandler{service: s}
 }
 
-// CreateRequest is the request parameter for creating a new todo
-type CreateRequest struct {
-	Task string `json:"task" validate:"required"`
-}
-
 // @Summary	Create a new todo
 // @Tags		todos
 // @Accept		json
@@ -43,36 +42,19 @@ type CreateRequest struct {
 // @Failure	500		{object}	ResponseError
 // @Router		/todos [post]
 func (t *todoHandler) Create(c echo.Context) error {
-	var req CreateRequest
+	var req model.CreateRequest
 	if err := t.MustBind(c, &req); err != nil {
 		return c.JSON(http.StatusBadRequest,
 			ResponseError{Errors: []Error{{Code: errors.CodeBadRequest, Message: err.Error()}}})
 	}
 
-	todo, err := t.service.Create(req.Task)
+	todo, err := t.service.Create(&req)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError,
 			ResponseError{Errors: []Error{{Code: errors.CodeInternalServerError, Message: err.Error()}}})
 	}
 
 	return c.JSON(http.StatusCreated, ResponseData{Data: todo})
-}
-
-// UpdateRequest is the request parameter for updating a todo
-type UpdateRequest struct {
-	UpdateRequestBody
-	UpdateRequestPath
-}
-
-// UpdateRequestBody is the request body for updating a todo
-type UpdateRequestBody struct {
-	Task   string       `json:"task,omitempty"`
-	Status model.Status `json:"status,omitempty"`
-}
-
-// UpdateRequestPath is the request parameter for updating a todo
-type UpdateRequestPath struct {
-	ID int `param:"id" validate:"required"`
 }
 
 // @Summary	Update a todo
@@ -86,13 +68,13 @@ type UpdateRequestPath struct {
 // @Failure	500		{object}	ResponseError
 // @Router		/todos/:id [put]
 func (t *todoHandler) Update(c echo.Context) error {
-	var req UpdateRequest
+	var req model.UpdateRequest
 	if err := t.MustBind(c, &req); err != nil {
 		return c.JSON(http.StatusBadRequest,
 			ResponseError{Errors: []Error{{Code: errors.CodeBadRequest, Message: err.Error()}}})
 	}
 
-	todo, err := t.service.Update(req.ID, req.Task, req.Status)
+	todo, err := t.service.Update(req)
 	if err != nil {
 		if err == model.ErrNotFound {
 			return c.JSON(http.StatusNotFound,
@@ -127,12 +109,7 @@ func (t *todoHandler) Delete(c echo.Context) error {
 
 	todo, err := t.service.Delete(req.ID)
 	if err != nil {
-		if err == model.ErrNotFound {
-			return c.JSON(http.StatusNotFound,
-				ResponseError{Errors: []Error{{Code: errors.CodeNotFound, Message: "todo not found"}}})
-		}
-		return c.JSON(http.StatusInternalServerError,
-			ResponseError{Errors: []Error{{Code: errors.CodeInternalServerError, Message: err.Error()}}})
+		return t.handleError(c, err)
 	}
 	return c.JSON(http.StatusOK, ResponseData{Data: todo})
 }
@@ -159,12 +136,7 @@ func (t *todoHandler) Find(c echo.Context) error {
 
 	res, err := t.service.Find(req.ID)
 	if err != nil {
-		if err == model.ErrNotFound {
-			return c.JSON(http.StatusNotFound,
-				ResponseError{Errors: []Error{{Code: errors.CodeNotFound, Message: "todo not found"}}})
-		}
-		return c.JSON(http.StatusInternalServerError,
-			ResponseError{Errors: []Error{{Code: errors.CodeInternalServerError, Message: err.Error()}}})
+		return t.handleError(c, err)
 	}
 	return c.JSON(http.StatusOK, ResponseData{Data: res})
 }
@@ -175,21 +147,60 @@ func (t *todoHandler) Find(c echo.Context) error {
 // @Failure	500	{object}	ResponseError
 // @Router		/todos [get]
 func (t *todoHandler) FindAll(c echo.Context) error {
+	return t.fetchTodos(c, func(queryParam *model.QueryParam) ([]*model.Todo, int64, error) {
+		todos, total, err := t.service.FindAll(queryParam)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		return todos, total, nil
+	})
+}
+
+func (t *todoHandler) FindStatusList(c echo.Context) error {
+	return t.fetchTodos(c, func(queryParam *model.QueryParam) ([]*model.Todo, int64, error) {
+		todos, total, err := t.service.FindStatusList(queryParam)
+		if err != nil {
+			return nil, 0, err
+		}
+		return todos, total, nil
+	})
+}
+
+func (t *todoHandler) FindAllTasksWithoutPagination(c echo.Context) error {
+	res, err := t.service.FindAllTasksWithoutPagination()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError,
+			ResponseError{Errors: []Error{{Code: errors.CodeInternalServerError, Message: err.Error()}}})
+	}
+	return c.JSON(http.StatusOK, ResponseData{Data: res})
+}
+
+func (t *todoHandler) handleError(c echo.Context, err error) error {
+	if err == model.ErrNotFound {
+		return c.JSON(http.StatusNotFound,
+			ResponseError{Errors: []Error{{Code: errors.CodeNotFound, Message: "todo not found"}}})
+	}
+	return c.JSON(http.StatusInternalServerError,
+		ResponseError{Errors: []Error{{Code: errors.CodeInternalServerError, Message: err.Error()}}})
+}
+
+func (t *todoHandler) fetchTodos(c echo.Context, queryFunc func(*model.QueryParam) ([]*model.Todo, int64, error)) error {
 	var queryParam model.QueryParam
 	if err := c.Bind(&queryParam); err != nil {
 		return c.JSON(http.StatusBadRequest,
 			ResponseError{Errors: []Error{{Code: errors.CodeBadRequest, Message: err.Error()}}})
 	}
 
-	// Provide default values for pagination
+	// Default pagination
 	if queryParam.Page <= 0 {
-		queryParam.Page = 1 // Default to page 1
+		queryParam.Page = 1
 	}
 	if queryParam.PerPage <= 0 {
-		queryParam.PerPage = 10 // Default to 10 items per page
+		queryParam.PerPage = 10
 	}
 
-	res, total, err := t.service.FindAll(&queryParam)
+	res, total, err := queryFunc(&queryParam)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError,
 			ResponseError{Errors: []Error{{Code: errors.CodeInternalServerError, Message: err.Error()}}})

@@ -3,12 +3,16 @@ package model
 import "fmt"
 
 // ErrNotFound is the error for not found.
-var ErrNotFound = fmt.Errorf("not found")
-var ErrStatusNotFound = fmt.Errorf("status not found")
+var (
+	ErrNotFound       = fmt.Errorf("not found")
+	ErrStatusNotFound = fmt.Errorf("status not found")
+)
 
+// QueryParam represents the query parameters for pagination and filtering
+// in API requests. It includes options for page number, items per page,
+// and a keyword for filtering.
 type QueryParam struct {
-	Task    string `query:"task"`
-	Status  string `query:"status"`
-	Page    int    `query:"page"`
-	PerPage int    `query:"per_page"`
+	Page    int    `query:"page"`     // Page is the current page number for pagination.
+	PerPage int    `query:"per_page"` // PerPage defines the number of items per page.
+	KeyWord string `query:"key_word"` // KeyWord is an optional search term for filtering.
 }

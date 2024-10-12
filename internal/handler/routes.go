@@ -26,8 +26,10 @@ func Register(e *echo.Echo, db *gorm.DB) {
 	{
 		todo.POST("", todoHandler.Create)
 		todo.GET("", todoHandler.FindAll)
+		todo.GET("/status", todoHandler.FindStatusList)
 		todo.GET("/:id", todoHandler.Find)
 		todo.PUT("/:id", todoHandler.Update)
 		todo.DELETE("/:id", todoHandler.Delete)
+		todo.GET("/withoutPagination", todoHandler.FindAllTasksWithoutPagination)
 	}
 }

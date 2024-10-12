@@ -1,12 +1,12 @@
 <template>
   <div class="pagination">
-    <button @click="changePage(currentPage - 1)" :disabled="currentPage === 1">
+    <button :disabled="currentPage === 1" @click="changePage(currentPage - 1)">
       Previous Page
     </button>
     <span>Page {{ currentPage }} / {{ totalPages }}</span>
     <button
-      @click="changePage(currentPage + 1)"
       :disabled="currentPage === totalPages"
+      @click="changePage(currentPage + 1)"
     >
       Next Page
     </button>
@@ -24,7 +24,16 @@ export default {
       type: Number,
       required: true,
     },
+    searchTask: {
+    type: String,
+    default: '',
   },
+  searchStatus: {
+    type: String,
+    default: 'all',
+  }
+  },
+  emits: ['close', 'page-changed', 'updateSearchTask', 'updateSearchStatus'],
   methods: {
     changePage(newPage) {
       this.$emit('page-changed', newPage);

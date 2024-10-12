@@ -16,6 +16,8 @@ type Todo interface {
 	Update(t *model.Todo) error
 	Find(id int) (*model.Todo, error)
 	FindAll(queryParam *model.QueryParam) ([]*model.Todo, int64, error)
+	FindStatusList(queryParam *model.QueryParam) ([]*model.Todo, int64, error)
+	FindAllTasksWithoutPagination() ([]*model.Todo, error)
 }
 
 type todo struct {
@@ -74,11 +76,8 @@ func (td *todo) FindAll(queryParam *model.QueryParam) ([]*model.Todo, int64, err
 	query := td.db.Model(&model.Todo{})
 
 	// Build the query for filtering
-	if queryParam.Task != "" {
-		query = query.Where("LOWER(task) LIKE ?", "%"+strings.ToLower(queryParam.Task)+"%")
-	}
-	if queryParam.Status != "" {
-		query = query.Where("LOWER(status) LIKE ?", "%"+strings.ToLower(queryParam.Status)+"%")
+	if queryParam.KeyWord != "" {
+		query = query.Where("LOWER(task) LIKE ? OR LOWER(status) LIKE ? OR LOWER(description) LIKE ? OR LOWER(priority_task) LIKE ?", "%"+strings.ToLower(queryParam.KeyWord)+"%", "%"+strings.ToLower(queryParam.KeyWord)+"%", "%"+strings.ToLower(queryParam.KeyWord)+"%", "%"+strings.ToLower(queryParam.KeyWord)+"%")
 	}
 
 	// Count the total records
@@ -98,4 +97,36 @@ func (td *todo) FindAll(queryParam *model.QueryParam) ([]*model.Todo, int64, err
 	}
 
 	return todos, total, nil
+}
+
+func (td *todo) FindStatusList(queryParam *model.QueryParam) ([]*model.Todo, int64, error) {
+	var todos []*model.Todo
+	var total int64
+	query := td.db.Model(&model.Todo{})
+
+	if queryParam.KeyWord != "" {
+		query = query.Where("status = ?", strings.ToLower(queryParam.KeyWord))
+	}
+
+	// Count the total records
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	if queryParam.Page > 0 && queryParam.PerPage > 0 {
+		query = query.Offset((queryParam.Page - 1) * queryParam.PerPage).Limit(queryParam.PerPage)
+	}
+
+	if err := query.Find(&todos).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return todos, total, nil
+}
+
+func (td *todo) FindAllTasksWithoutPagination() ([]*model.Todo, error) {
+	var todos []*model.Todo
+	if err := td.db.Find(&todos).Error; err != nil {
+		return nil, err
+	}
+	return todos, nil
 }

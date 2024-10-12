@@ -1,37 +1,64 @@
-
-export async function fetchTodos(currentPage, perPage, searchTask, searchStatus) {
+export async function fetchTodos(
+  currentPage,
+  perPage,
+  keyWord
+) {
   try {
     const params = new URLSearchParams({
       page: currentPage.toString(),
       per_page: perPage.toString(),
     });
 
-    if (searchTask.trim()) {
-      params.append("task", searchTask.trim());
-    }
-
-    if (searchStatus) {
-      params.append("status", searchStatus);
+    if (keyWord.trim()) {
+      params.append("key_word", keyWord.trim());
     }
 
     const url = `/api/v1/todos?${params.toString()}`;
     const response = await fetch(url);
     if (!response.ok) {
-      throw new Error(`Failed to get todo list. statusCode: ${response.status}`);
+      throw new Error(
+        `Failed to get todo list. statusCode: ${response.status}`
+      );
     }
 
     const data = await response.json();
-    return data; 
+    return data;
   } catch (error) {
     console.error("Error fetching todos:", error);
-    throw error; 
+    throw error;
+  }
+}
+
+export async function fetchTodosForStatus(currentPage, perPage, status) {
+  try {
+    const params = new URLSearchParams({
+      page: currentPage.toString(),
+      per_page: perPage.toString(),
+    });
+
+    if (status.trim()) {
+      params.append("key_word", status.trim());
+    }
+    const url = `/api/v1/todos/status?${params.toString()}`;
+    const response = await fetch(url);
+  
+    if (!response.ok) {
+      throw new Error(
+        `Failed to get todo list. statusCode: ${response.status}`
+      );
+    }
+
+    const data = await response.json();
+    console.log(data);
+    return data;
+  } catch (error) {
+    console.error("Error fetching todos:", error);
+    throw error;
   }
 }
 
 // Function to add a new todo
-export async function addTodo(newTask) {
-  if (newTask.trim() === "") return;
-
+export async function addTodo(currentTask) {
   try {
     const response = await fetch("/api/v1/todos", {
       method: "POST",
@@ -39,11 +66,12 @@ export async function addTodo(newTask) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        task: newTask,
-        status: "created",
+        task_title: currentTask.title,
+        description: currentTask.description,
+        priority_task: currentTask.priority.toLowerCase(),
+        status: currentTask.status.toLowerCase(),
       }),
     });
-
     if (!response.ok) {
       throw new Error(`Failed to create todo. statusCode: ${response.status}`);
     }
@@ -55,24 +83,21 @@ export async function addTodo(newTask) {
   }
 }
 
-
 // Edit an existing todo
-export async function editTodo(editTaskId, editTaskContent) {
-  if (!editTaskContent.trim()) {
-    throw new Error("Please enter a valid task.");
-  }
-
+export async function editTodo(updatedTask) {
   try {
-    const response = await fetch(`/api/v1/todos/${editTaskId}`, {
+    const response = await fetch(`/api/v1/todos/${updatedTask.ID}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        task: editTaskContent,
+        task_title: updatedTask.Task,
+        description: updatedTask.Description,
+        priority_task: updatedTask.PriorityTask.toLowerCase(),
+        status: updatedTask.Status.toLowerCase(),
       }),
     });
-
     if (!response.ok) {
       throw new Error(`Failed to edit todo. statusCode: ${response.status}`);
     }
@@ -83,8 +108,6 @@ export async function editTodo(editTaskId, editTaskContent) {
     throw error;
   }
 }
-
-
 
 // Update the status of a todo
 export async function updateTodoStatus(todo) {
@@ -105,7 +128,9 @@ export async function updateTodoStatus(todo) {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to update todo status. statusCode: ${response.status}`);
+      throw new Error(
+        `Failed to update todo status. statusCode: ${response.status}`
+      );
     }
 
     return response.json();
@@ -147,13 +172,33 @@ export async function viewTodoDetails(id) {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch todo details. statusCode: ${response.status}`);
+      throw new Error(
+        `Failed to fetch todo details. statusCode: ${response.status}`
+      );
     }
 
     const data = await response.json();
     return data.data;
   } catch (error) {
     console.error("Error fetching todo details:", error.message);
+    throw error;
+  }
+}
+
+export async function fetchTasksWithoutPagination() {
+  try {
+    const url = `/api/v1/todos/withoutPagination`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(
+        `Failed to get todo list. statusCode: ${response.status}`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching todos:", error);
     throw error;
   }
 }

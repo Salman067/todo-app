@@ -4,26 +4,38 @@ import "time"
 
 // Todo is the model for the todo endpoint.
 type Todo struct {
-	ID        int `gorm:"primaryKey"`
-	Task      string
-	Status    Status
-	Priority  int
-	CreatedAt time.Time `gorm:"autoCreateTime"`
-	UpdatedAt time.Time `gorm:"autoUpdateTime"`
+	ID           int `gorm:"primaryKey"`
+	Task         string
+	Description  string
+	Status       Status
+	Priority     int
+	PriorityTask string    `gorm:"default:'medium'"`
+	CreatedAt    time.Time `gorm:"autoCreateTime"`
+	UpdatedAt    time.Time `gorm:"autoUpdateTime"`
 }
 
 // PriorityMap is the todo priority map
 var PriorityMap = map[string]int{
-	"created":     1,
+	"to-do":       1,
 	"in-progress": 2,
-	"done":        3,
+	"completed":   3,
+}
+
+// CreateRequest is the request parameter for creating a new todo
+type CreateRequest struct {
+	TaskTitle    string `json:"task_title" validate:"required"`
+	Description  string `json:"description"`
+	PriorityTask string `json:"priority_task" validate:"required"`
+	Status       Status `json:"status" validate:"required"`
 }
 
 // NewTodo returns a new instance of the todo model.
-func NewTodo(task string) *Todo {
+func NewTodo(task *CreateRequest) *Todo {
 	return &Todo{
-		Task:   task,
-		Status: Created,
+		Task:         task.TaskTitle,
+		Description:  task.Description,
+		PriorityTask: task.PriorityTask,
+		Status:       task.Status,
 	}
 }
 
@@ -34,6 +46,25 @@ func NewUpdateTodo(id int, task string, status Status) *Todo {
 		Task:   task,
 		Status: status,
 	}
+}
+
+// UpdateRequest is the request parameter for updating a todo
+type UpdateRequest struct {
+	UpdateRequestBody
+	UpdateRequestPath
+}
+
+// UpdateRequestBody is the request body for updating a todo
+type UpdateRequestBody struct {
+	Task         string `json:"task,omitempty"`
+	Description  string `json:"description,omitempty"`
+	Status       Status `json:"status,omitempty"`
+	PriorityTask string `json:"priority_task,omitempty"`
+}
+
+// UpdateRequestPath is the request parameter for updating a todo
+type UpdateRequestPath struct {
+	ID int `param:"id" validate:"required"`
 }
 
 // Status is the status of the task.
