@@ -29,7 +29,7 @@ export async function fetchTodos(
   }
 }
 
-export async function fetchTodosForStatus(currentPage, perPage, status) {
+export async function fetchTodosForStatus(currentPage, perPage, status,keyWord) {
   try {
     const params = new URLSearchParams({
       page: currentPage.toString(),
@@ -37,7 +37,10 @@ export async function fetchTodosForStatus(currentPage, perPage, status) {
     });
 
     if (status.trim()) {
-      params.append("key_word", status.trim());
+      params.append("status", status.trim());
+    }
+    if (keyWord.trim()) {
+      params.append("key_word", keyWord.trim());
     }
     const url = `/api/v1/todos/status?${params.toString()}`;
     const response = await fetch(url);
@@ -92,7 +95,7 @@ export async function editTodo(updatedTask) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        task_title: updatedTask.Task,
+        task: updatedTask.Task,
         description: updatedTask.Description,
         priority_task: updatedTask.PriorityTask.toLowerCase(),
         status: updatedTask.Status.toLowerCase(),
@@ -149,7 +152,6 @@ export async function deleteTodo(id) {
         "Content-Type": "application/json",
       },
     });
-
     if (!response.ok) {
       throw new Error(`Failed to delete todo. statusCode: ${response.status}`);
     }

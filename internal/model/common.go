@@ -15,4 +15,5 @@ type QueryParam struct {
 	Page    int    `query:"page"`     // Page is the current page number for pagination.
 	PerPage int    `query:"per_page"` // PerPage defines the number of items per page.
 	KeyWord string `query:"key_word"` // KeyWord is an optional search term for filtering.
+	Status  string `query:"status"`   // Status is an optional status filter.
 }

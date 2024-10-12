@@ -104,10 +104,13 @@ func (td *todo) FindStatusList(queryParam *model.QueryParam) ([]*model.Todo, int
 	var total int64
 	query := td.db.Model(&model.Todo{})
 
-	if queryParam.KeyWord != "" {
-		query = query.Where("status = ?", strings.ToLower(queryParam.KeyWord))
+	if queryParam.Status != "" {
+		query = query.Where("status = ?", strings.ToLower(queryParam.Status))
 	}
 
+	if queryParam.KeyWord != "" {
+		query = query.Where("LOWER(task) LIKE ? OR LOWER(status) LIKE ? OR LOWER(description) LIKE ? OR LOWER(priority_task) LIKE ?", "%"+strings.ToLower(queryParam.KeyWord)+"%", "%"+strings.ToLower(queryParam.KeyWord)+"%", "%"+strings.ToLower(queryParam.KeyWord)+"%", "%"+strings.ToLower(queryParam.KeyWord)+"%")
+	}
 	// Count the total records
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err

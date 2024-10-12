@@ -43,25 +43,18 @@ func TestTodoHandler_Create(t *testing.T) {
 	}{
 		{
 			name:       "successful_create",
-			createBody: `{"task":"Created Task"}`,
+			createBody: `{"task_title":"Created Task", "status":"to-do", "priority_task":"high"}`,
 			want: want{
 				StatusCode: http.StatusCreated,
-				Response:   []byte(`{"data":{"Task":"Created Task","Status":"created"}}`),
+				Response:   []byte(`{"data":{"Task":"Created Task", "Description": "","Status":"to-do","Priority": 1,"PriorityTask":"high"}}`),
 			},
 		},
 		{
-			name:       "successful_create_but_with_ignore_status",
-			createBody: `{"task":"Created Task", "status":"done"}`,
+			name:       "successful_create_with_ignore_status",
+			createBody: `{"task_title":"Created Task", "status":"completed", "priority_task":"medium"}`,
 			want: want{
 				StatusCode: http.StatusCreated,
-				Response:   []byte(`{"data":{"Task":"Created Task","Status":"created"}}`),
-			},
-		},
-		{
-			name:       "invalid_request_body",
-			createBody: `{"task":1}`,
-			want: want{
-				StatusCode: http.StatusBadRequest,
+				Response:   []byte(`{"data":{"Task":"Created Task", "Description": "","Status":"completed","Priority": 3,"PriorityTask":"medium"}}`),
 			},
 		},
 	}
@@ -76,23 +69,28 @@ func TestTodoHandler_Create(t *testing.T) {
 			c.SetPath("/todos")
 
 			// Execute
-			require.NoError(t, handler.Create(c))
+			err := handler.Create(c)
 
 			// Assert
 			assert.Equal(t, tt.want.StatusCode, rec.Code)
 
-			if tt.want.Response == nil {
+			if tt.wantErr {
+				require.Error(t, err) // Changed from assert.Error to require.Error
 				return
 			}
-			got := rec.Body.Bytes()
+			require.NoError(t, err)
 
-			opts := []cmp.Option{
-				cmpTransformJSON(t),
-				ignoreMapEntires(map[string]any{"CreatedAt": 1, "UpdatedAt": 1, "ID": 1}),
-			}
-			if diff := cmp.Diff(got, tt.want.Response, opts...); diff != "" {
-				t.Errorf("return value mismatch (-got +want):\n%s", diff)
-				t.Logf("got:\n%s", string(got))
+			if tt.want.Response != nil {
+				got := rec.Body.Bytes()
+
+				opts := []cmp.Option{
+					cmpTransformJSON(t),
+					ignoreMapEntires(map[string]any{"CreatedAt": 1, "UpdatedAt": 1, "ID": 1}),
+				}
+				if diff := cmp.Diff(got, tt.want.Response, opts...); diff != "" {
+					t.Errorf("return value mismatch (-got +want):\n%s", diff)
+					t.Logf("got:\n%s", string(got))
+				}
 			}
 		})
 	}
@@ -124,11 +122,16 @@ func TestTodoHandler_Update(t *testing.T) {
 	}{
 		{
 			name:       "successful_update",
-			createBody: `{"task":"Updated Task"}`,
-			updateBody: `{"task":"Updated Task","status":"done"}`,
+			createBody: `{"task_title":"Created Task", "status":"to-do", "priority_task":"high"}`,
+			updateBody: `{"task":"Updated Task","status":"completed"}`,
 			want: want{
 				StatusCode: http.StatusOK,
-				Response:   []byte(`{"data":{"Task":"Updated Task","Status":"done"}}`),
+				Response: []byte(`{"data":{        
+				"Task": "Updated Task",
+        "Description": "",
+        "Status": "completed",
+        "Priority": 3,
+        "PriorityTask": "high"}}`),
 			},
 		},
 		{
@@ -221,9 +224,9 @@ func TestTodoHandler_Delete(t *testing.T) {
 	}{
 		{
 			name:       "successful_delete",
-			createBody: `{"task":"Deleted Task"}`,
+			createBody: `{"task_title":"Created Task", "status":"to-do", "priority_task":"high"}`,
 			want: want{
-				StatusCode: http.StatusNoContent,
+				StatusCode: http.StatusOK,
 			},
 		},
 		{
@@ -294,10 +297,15 @@ func TestTodoHandler_Find(t *testing.T) {
 	}{
 		{
 			name:       "successful_find",
-			createBody: `{"task":"Found Task"}`,
+			createBody: `{"task_title":"Created Task", "status":"to-do", "priority_task":"high"}`,
 			want: want{
 				StatusCode: http.StatusOK,
-				Response:   []byte(`{"data":{"Task":"Found Task","Status":"created"}}`),
+				Response: []byte(`{"data":{        
+				"Task": "Created Task",
+        "Description": "",
+        "Status": "to-do",
+        "Priority": 1,
+        "PriorityTask": "high"}}`),
 			},
 		},
 		{

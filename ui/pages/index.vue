@@ -33,7 +33,7 @@
               getTodos('Tasks');
             "
           >
-            <i class="fas fa-tasks"/> Tasks
+            <i class="fas fa-tasks" /> Tasks
           </a>
         </li>
         <li>
@@ -46,7 +46,7 @@
               filterTasks('Completed');
             "
           >
-            <i class="fas fa-check-circle"/> Completed
+            <i class="fas fa-check-circle" /> Completed
           </a>
         </li>
         <li>
@@ -59,7 +59,7 @@
               filterTasks('In-Progress');
             "
           >
-            <i class="fas fa-spinner"/> In Progress
+            <i class="fas fa-spinner" /> In Progress
           </a>
         </li>
         <li>
@@ -72,7 +72,7 @@
               filterTasks('To-Do');
             "
           >
-            <i class="fas fa-list"/> To Do
+            <i class="fas fa-list" /> To Do
           </a>
         </li>
       </ul>
@@ -94,7 +94,7 @@
             :class="{ active: viewMode === 'list' }"
             @click="viewMode = 'list'"
           >
-            <i class="fas fa-list"/> List View
+            <i class="fas fa-list" /> List View
           </button>
           <!-- Sorting Dropdown -->
           <label for="sort-by" class="sort-label">Sort by:</label>
@@ -109,16 +109,16 @@
           <button
             class="view-btn"
             :class="{ active: viewMode === 'board' }"
-             @click="handleViewToggle('board')"
+            @click="handleViewToggle('board')"
           >
-            <i class="fas fa-th-large"/> Board View
+            <i class="fas fa-th-large" /> Board View
           </button>
           <button
             class="view-btn"
             :class="{ active: viewMode === 'list' }"
             @click="viewMode = 'list'"
           >
-            <i class="fas fa-list"/> List View
+            <i class="fas fa-list" /> List View
           </button>
           <!-- Sorting Dropdown -->
           <label for="sort-by" class="sort-label">Sort by:</label>
@@ -132,17 +132,17 @@
 
       <div class="status-container">
         <div class="status-card to-do">
-          <span class="status-indicator"/>
+          <span class="status-indicator" />
           <span class="status-title">To Do</span>
           <!-- <button class="add-button">+</button> -->
         </div>
         <div class="status-card in-progress">
-          <span class="status-indicator"/>
+          <span class="status-indicator" />
           <span class="status-title">In Progress</span>
           <!-- <button class="add-button">+</button> -->
         </div>
         <div class="status-card completed">
-          <span class="status-indicator"/>
+          <span class="status-indicator" />
           <span class="status-title">Completed</span>
           <!-- <button class="add-button">+</button> -->
         </div>
@@ -230,6 +230,7 @@
           </p>
           <!-- Use the Pagination component -->
           <Pagination
+            v-if="showPagination"
             :current-page="currentPage"
             :total-pages="totalPages"
             @page-changed="changePage"
@@ -376,6 +377,7 @@
           </p>
           <!-- Use the Pagination component -->
           <Pagination
+            v-if="showPagination"
             :current-page="currentPage"
             :total-pages="totalPages"
             @page-changed="changePage"
@@ -430,7 +432,6 @@
         <textarea
           v-model="currentEditTask.Description"
           placeholder="Task Description"
-          required
         />
         <select v-model="currentEditTask.PriorityTask">
           <option value="low">Low Priority</option>
@@ -514,6 +515,7 @@ export default {
       viewMode: "list",
       activeButton: "Tasks",
       sortBy: "PriorityTask",
+      activeStatus: "Tasks",
       tasks: [],
       isModalOpen: false,
       isEditing: false,
@@ -542,7 +544,7 @@ export default {
       perPage: 10,
       totalTodos: 0,
       selectedTodo: null,
-      selectedStatus: "",
+      selectedStatus: "Tasks",
     };
   },
 
@@ -551,7 +553,10 @@ export default {
       return this.tasks;
     },
     totalPages() {
-      return Math.ceil(this.totalTodos / this.perPage);
+      return Math.max(1, Math.ceil(this.totalTodos / this.perPage));
+    },
+    showPagination() {
+      return this.totalTodos > 0;
     },
     sortedTasks() {
       return this.tasks.slice().sort((a, b) => {
@@ -570,12 +575,21 @@ export default {
     },
   },
   mounted() {
+    this.setActiveButton("Tasks");
     this.getTodos();
   },
   methods: {
     sortTasks() {},
     setActiveButton(button) {
       this.activeButton = button;
+      this.activeStatus = button;
+      this.currentPage = 1;
+      this.keyWord = "";
+      if (button === "Tasks") {
+        this.getTodos();
+      } else {
+        this.filterTasks(button);
+      }
     },
     formatDate(date) {
       const options = { year: "numeric", month: "long", day: "numeric" };
@@ -596,7 +610,6 @@ export default {
       if (page >= 1 && page <= this.totalPages) {
         this.currentPage = page;
         if (this.selectedStatus !== "Tasks" && this.selectedStatus) {
-          console.log("page: ", this.currentPage);
           await this.filterTasks(this.selectedStatus, "change-page");
         } else {
           await this.getTodos(this.selectedStatus);
@@ -651,9 +664,15 @@ export default {
         Status: this.currentEditTask.Status,
       };
       try {
-        await editTodo(updatedTask);
+        const s = await editTodo(updatedTask);
+        console.log(s);
         this.isEditModalOpen = false;
-        this.getTodos();
+        if (this.selectedStatus !== "Tasks") {
+          this.filterTasks(this.selectedStatus);
+        } else {
+          this.getTodos(this.selectedStatus);
+        }
+
         this.closeEditModal();
         this.showToast("Task updated successfully.");
       } catch (error) {
@@ -681,7 +700,7 @@ export default {
     },
 
     async getTodos(status) {
-      this.selectedStatus = status;
+      this.selectedStatus = status || "Tasks";
       try {
         const data = await fetchTodos(
           this.currentPage,
@@ -693,18 +712,29 @@ export default {
         this.totalTodos = data.total;
         this.currentPage = data.page;
         this.perPage = data.per_page;
+
+        // Adjust currentPage if it's out of bounds
+        if (this.currentPage > this.totalPages) {
+          this.currentPage = this.totalPages;
+          this.getTodos(); // Fetch again with the corrected page
+        }
       } catch (error) {
-        console.log(error.message);
+        console.log("me", error.message);
         this.showToast("Failed to retrieve tasks", "error");
       }
     },
 
     getTasksByStatus(status) {
+      if (!status || typeof status !== "string") {
+        return [];
+      }
       return this.tasks.filter(
-        (task) => task.Status.toLowerCase() === status.toLowerCase()
+        (task) =>
+          task.Status &&
+          typeof task.Status === "string" &&
+          task.Status.toLowerCase() === status.toLowerCase()
       );
     },
-
     getStatusClass(status) {
       return {
         "status-todo": status === "to-do",
@@ -712,20 +742,6 @@ export default {
         "status-completed": status === "completed",
       };
     },
-
-  //   showToast(message, type = "success", duration = 2000) {
-  //   if (this.toast.timeout) {
-  //     clearTimeout(this.toast.timeout); 
-  //   }
-
-  //   this.toast.show = true;
-  //   this.toast.message = message;
-  //   this.toast.type = type;
-
-  //   this.toast.timeout = setTimeout(() => {
-  //     this.toast.show = false;
-  //   }, duration);
-  // },
 
     truncateText(text, length = 50) {
       if (!text) return "";
@@ -743,9 +759,16 @@ export default {
 
     async handleDeleteTodo(id) {
       try {
-        await deleteTodo(id);
+       await deleteTodo(id);
         this.showToast("Task deleted successfully", "success");
-        this.getTodos();
+        if (
+          this.selectedStatus !== "Tasks" &&
+          this.selectedStatus !== undefined
+        ) {
+          this.filterTasks(this.selectedStatus);
+        } else {
+          this.getTodos(this.selectedStatus);
+        }
       } catch (error) {
         console.error("Error deleting task:", error);
         this.showToast("Failed to delete task", "error");
@@ -766,24 +789,29 @@ export default {
       this.isDetailsModalOpen = false;
     },
 
-    async filterTasks(status, pageCalulate) {
+    async filterTasks(status, pageCalculate) {
       this.selectedStatus = status;
-      if (pageCalulate !== "change-page") {
+      if (pageCalculate !== "change-page") {
         this.currentPage = 1;
       }
       try {
         const data = await fetchTodosForStatus(
           this.currentPage,
           this.perPage,
-          this.selectedStatus.toLowerCase()
+          this.selectedStatus.toLowerCase(),
+          this.keyWord
         );
         this.tasks = data.data;
         this.totalTodos = data.total;
         this.currentPage = data.page;
         this.perPage = data.per_page;
-        console.log("fatch current page", this.currentPage);
+
+        if (this.currentPage > this.totalPages) {
+          this.currentPage = this.totalPages;
+          this.filterTasks(status, "change-page");
+        }
       } catch (error) {
-        console.log(error.message);
+        console.log("filter", error.message);
         this.showToast("Failed to retrieve tasks", "error");
       }
     },
@@ -794,7 +822,11 @@ export default {
     },
     searchTodos() {
       this.currentPage = 1;
-      this.getTodos();
+      if (this.activeStatus === "Tasks") {
+        this.getTodos();
+      } else {
+        this.filterTasks(this.activeStatus);
+      }
     },
 
     async fetchTasksWithoutPaginations(status) {
@@ -809,8 +841,8 @@ export default {
     },
     handleViewToggle(view) {
       this.viewMode = view;
-      if (view === 'board') {
-        this.fetchTasksWithoutPaginations(); 
+      if (view === "board") {
+        this.fetchTasksWithoutPaginations();
       }
     },
   },
