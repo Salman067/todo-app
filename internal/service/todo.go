@@ -51,8 +51,8 @@ func (t *todo) Update(req model.UpdateRequest) (*model.Todo, error) {
 	}
 
 	// 空文字列の場合、現在の値を使用
-	if req.Task != "" {
-		currentTodo.Task = req.Task
+	if req.TaskTitle != "" {
+		currentTodo.Task = req.TaskTitle
 	}
 	if req.Description != "" {
 		currentTodo.Description = req.Description

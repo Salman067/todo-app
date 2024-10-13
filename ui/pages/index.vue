@@ -427,7 +427,7 @@
     >
       <form @submit.prevent="saveEditTask">
         <input
-          v-model="currentEditTask.Task"
+          v-model="currentEditTask.TaskTitle"
           placeholder="Task Title"
           required
         >
@@ -531,7 +531,7 @@ export default {
         status: "To-Do",
       },
       currentEditTask: {
-        Task: "",
+        TaskTitle: "",
         Description: "",
         PriorityTask: "",
         Status: "",
@@ -644,7 +644,7 @@ export default {
       this.isEditModalOpen = true;
       this.currentEditTask = {
         ID: task.ID,
-        Task: task.Task,
+        TaskTitle: task.Task,
         Description: task.Description,
         PriorityTask: task.PriorityTask,
         Status: task.Status,
@@ -653,7 +653,7 @@ export default {
     closeEditModal() {
       this.isEditModalOpen = false;
       this.currentEditTask = {
-        Task: "",
+        TaskTitle: "",
         Description: "",
         PriorityTask: "",
         Status: "",
@@ -663,7 +663,7 @@ export default {
     async saveEditTask() {
       const updatedTask = {
         ID: this.currentEditTask.ID,
-        Task: this.currentEditTask.Task,
+        TaskTitle: this.currentEditTask.TaskTitle,
         Description: this.currentEditTask.Description,
         PriorityTask: this.currentEditTask.PriorityTask,
         Status: this.currentEditTask.Status,
@@ -720,15 +720,13 @@ export default {
           this.keyWord
         );
         this.tasks = data.data;
-        console.log(this.tasks);
         this.totalTodos = data.total;
         this.currentPage = data.page;
         this.perPage = data.per_page;
 
-        // Adjust currentPage if it's out of bounds
         if (this.currentPage > this.totalPages) {
           this.currentPage = this.totalPages;
-          this.getTodos(); // Fetch again with the corrected page
+          this.getTodos(); 
         }
       } catch (error) {
         console.log("me", error.message);

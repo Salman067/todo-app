@@ -123,7 +123,7 @@ func TestTodoHandler_Update(t *testing.T) {
 		{
 			name:       "successful_update",
 			createBody: `{"task_title":"Created Task", "status":"to-do", "priority_task":"high"}`,
-			updateBody: `{"task":"Updated Task","status":"completed"}`,
+			updateBody: `{"task_title":"Updated Task","status":"completed"}`,
 			want: want{
 				StatusCode: http.StatusOK,
 				Response: []byte(`{"data":{        
@@ -137,14 +137,14 @@ func TestTodoHandler_Update(t *testing.T) {
 		{
 			name:       "not_found_record",
 			updateID:   "-1",
-			updateBody: `{"task":"Updated Task","status":"done"}`,
+			updateBody: `{"task_title":"Updated Task","status":"done"}`,
 			want: want{
 				StatusCode: http.StatusNotFound,
 			},
 		},
 		{
 			name:       "invalid_request_body",
-			updateBody: `{"task":1}`,
+			updateBody: `{"task_title":1}`,
 			want: want{
 				StatusCode: http.StatusBadRequest,
 			},
@@ -152,7 +152,7 @@ func TestTodoHandler_Update(t *testing.T) {
 		{
 			name:       "invalid_request_parameter",
 			updateID:   "invalid",
-			updateBody: `{"task":"Updated Task","status":"done"}`,
+			updateBody: `{"task_title":"Updated Task","status":"done"}`,
 			want: want{
 				StatusCode: http.StatusBadRequest,
 			},

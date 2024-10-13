@@ -95,7 +95,7 @@ export async function editTodo(updatedTask) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        task: updatedTask.Task,
+        task_title: updatedTask.TaskTitle,
         description: updatedTask.Description,
         priority_task: updatedTask.PriorityTask.toLowerCase(),
         status: updatedTask.Status.toLowerCase(),

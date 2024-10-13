@@ -3,7 +3,7 @@ package docs
 
 import "github.com/swaggo/swag"
 
-const docTemplate = `{
+const docTemplate =`{
   "schemes": [
     "http"
   ],
@@ -56,7 +56,7 @@ const docTemplate = `{
         "tags": [
           "todos"
         ],
-        "summary": "Find all todos",
+        "summary": "Find all todos with pagination and parameters for global searching........",
         "parameters": [
           {
             "name": "key_word",
@@ -130,7 +130,7 @@ const docTemplate = `{
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/handler.CreateRequest"
+              "$ref": "#/definitions/model.CreateRequest"
             }
           }
         ],
@@ -168,24 +168,63 @@ const docTemplate = `{
         }
       }
     },
-    "/todos/status": {
+     "/todos/withoutPagination": {
       "get": {
         "tags": [
           "todos"
         ],
-        "summary": "Retrieve all todos with a specific status",
+        "summary": "Find all todos without pagination for broad viewing on the ui",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/handler.ResponseData"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "Data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/definitions/model.Todo"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "schema": {
+              "$ref": "#/definitions/handler.ResponseError"
+            }
+          }
+        }
+      }
+    },
+     "/todos/status": {
+      "get": {
+        "tags": [
+          "todos"
+        ],
+        "summary": "Find all todos filtering by status with pagination and parameters for global searching...",
         "parameters": [
-          {
+                  {
             "name": "key_word",
             "in": "query",
-            "description": "Filter todos by status",
+            "description": "Filter todos by task name, task Description, task priority, and task status",
             "required": false,
-            "type": "string",
-            "enum": [
-              "to-do",
-              "in-progress",
-              "completed"
-            ]
+            "type": "string"
+          },
+            {"name": "status",
+            "in": "query",
+            "description": "Filter todos by task status",
+            "required": false,
+            "type": "string"
           },
           {
             "name": "page",
@@ -235,44 +274,6 @@ const docTemplate = `{
         }
       }
     },
-      "/todos/withoutPagination":{
-"get": {
-        "tags": [
-          "todos"
-        ],
-        "summary": "Find all todos without pagination",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/handler.ResponseData"
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "Data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/definitions/model.Todo"
-                      }
-                    }
-                  }
-                }
-              ]
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "schema": {
-              "$ref": "#/definitions/handler.ResponseError"
-            }
-          }
-        }
-      }
-      },
     "/todos/{id}": {
       "get": {
         "tags": [
@@ -427,14 +428,28 @@ const docTemplate = `{
     }
   },
   "definitions": {
-    "handler.CreateRequest": {
+    "model.CreateRequest": {
       "type": "object",
       "required": [
-        "task"
+        "task_title", "description", "priority_task", "status"
       ],
       "properties": {
-        "task": {
+        "task_title": {
           "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "priority_task": {
+          "type": "string",
+                    "enum": [
+            "high",
+            "medium",
+            "low",
+          ]
+        },
+        "status": {
+          "$ref": "#/definitions/model.Status"
         }
       }
     },
@@ -472,45 +487,67 @@ const docTemplate = `{
     "handler.UpdateRequestBody": {
       "type": "object",
       "properties": {
+        "task_title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "priority_task": {
+          "type": "string",
+          "enum": [
+            "high",
+            "medium",
+            "low",
+          ]
+        },
         "status": {
           "$ref": "#/definitions/model.Status"
-        },
-        "task": {
-          "type": "string"
         }
       }
     },
     "model.Status": {
       "type": "string",
       "enum": [
-        "created",
-        "processing",
-        "done"
+        "to-do",
+        "in-progress",
+        "completed",
       ]
     },
     "model.Todo": {
       "type": "object",
       "properties": {
-        "createdAt": {
-          "type": "string"
-        },
-        "id": {
+        "ID": {
           "type": "integer"
         },
-        "status": {
+        "TaskTitle": {
+          "type": "string"
+        },
+        "Description": {
+          "type": "string"
+        },
+        "PriorityTask": {
+          "type": "string"
+        },
+        "Priority":{
+         "type": "integer"
+         },
+        "Status": {
           "$ref": "#/definitions/model.Status"
         },
-        "task": {
-          "type": "string"
+        "CreatedAt": {
+          "type": "string",
+          "format": "date-time"
         },
-        "updatedAt": {
-          "type": "string"
+        "UpdatedAt": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     }
   }
-}`
-
+}
+`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{

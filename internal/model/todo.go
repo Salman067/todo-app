@@ -56,7 +56,7 @@ type UpdateRequest struct {
 
 // UpdateRequestBody is the request body for updating a todo
 type UpdateRequestBody struct {
-	Task         string `json:"task,omitempty"`
+	TaskTitle    string `json:"task_title,omitempty"`
 	Description  string `json:"description,omitempty"`
 	Status       Status `json:"status,omitempty"`
 	PriorityTask string `json:"priority_task,omitempty"`
