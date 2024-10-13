@@ -97,8 +97,9 @@
             <i class="fas fa-list" /> List View
           </button>
           <!-- Sorting Dropdown -->
-          <label for="sort-by" class="sort-label">Sort by:</label>
+          <!-- <label for="sort-by" class="sort-label">Sort by:</label> -->
           <select v-model="sortBy" class="sort-dropdown" @change="sortTasks">
+            <option value="">Sort by</option>
             <option value="Task">Task Title</option>
             <option value="PriorityTask">Priority</option>
             <option value="CreatedAt">Created Date</option>
@@ -121,8 +122,9 @@
             <i class="fas fa-list" /> List View
           </button>
           <!-- Sorting Dropdown -->
-          <label for="sort-by" class="sort-label">Sort by:</label>
+          <!-- <label for="sort-by" class="sort-label">Sort by:</label> -->
           <select v-model="sortBy" class="sort-dropdown" @change="sortTasks">
+            <option value="">Sort by</option>
             <option value="Task">Task Title</option>
             <option value="PriorityTask">Priority</option>
             <option value="CreatedAt">Created Date</option>
@@ -514,7 +516,7 @@ export default {
       searchStatus: "",
       viewMode: "list",
       activeButton: "Tasks",
-      sortBy: "PriorityTask",
+      sortBy: "",
       activeStatus: "Tasks",
       tasks: [],
       isModalOpen: false,
@@ -568,8 +570,11 @@ export default {
           );
         } else if (this.sortBy === "CreatedAt") {
           return new Date(b.CreatedAt) - new Date(a.CreatedAt);
-        } else {
+        }else if(this.sortBy === "Task"){
           return a.Task.localeCompare(b.Task);
+        }
+         else {
+          return a.Priority - b.Priority;
         }
       });
     },
@@ -691,7 +696,14 @@ export default {
           status: "To-Do",
         };
         this.showToast("Task added successfully", "success");
-        this.getTodos();
+        if (
+          this.selectedStatus !== "Tasks" &&
+          this.selectedStatus !== undefined
+        ) {
+          this.filterTasks(this.selectedStatus);
+        } else {
+          this.getTodos(this.selectedStatus);
+        }
         this.closeAddModal();
       } catch (error) {
         console.log(error.message);
@@ -707,8 +719,8 @@ export default {
           this.perPage,
           this.keyWord
         );
-
         this.tasks = data.data;
+        console.log(this.tasks);
         this.totalTodos = data.total;
         this.currentPage = data.page;
         this.perPage = data.per_page;

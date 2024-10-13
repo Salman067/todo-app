@@ -86,7 +86,7 @@ func (td *todo) FindAll(queryParam *model.QueryParam) ([]*model.Todo, int64, err
 	}
 
 	// Order and apply pagination
-	query = query.Order("priority ASC")
+	query = query.Order("priority DESC")
 	if queryParam.Page > 0 && queryParam.PerPage > 0 {
 		query = query.Offset((queryParam.Page - 1) * queryParam.PerPage).Limit(queryParam.PerPage)
 	}
