@@ -97,9 +97,9 @@
             <i class="fas fa-list" /> List View
           </button>
           <!-- Sorting Dropdown -->
-          <!-- <label for="sort-by" class="sort-label">Sort by:</label> -->
+          <label for="sort-by" class="sort-label">Sort by:</label>
           <select v-model="sortBy" class="sort-dropdown" @change="sortTasks">
-            <option value="">Sort by</option>
+            <option value="">Select</option>
             <option value="Task">Task Title</option>
             <option value="PriorityTask">Priority</option>
             <option value="CreatedAt">Created Date</option>
@@ -122,9 +122,9 @@
             <i class="fas fa-list" /> List View
           </button>
           <!-- Sorting Dropdown -->
-          <!-- <label for="sort-by" class="sort-label">Sort by:</label> -->
+          <label for="sort-by" class="sort-label">Sort by:</label>
           <select v-model="sortBy" class="sort-dropdown" @change="sortTasks">
-            <option value="">Sort by</option>
+            <option value="">Select</option>
             <option value="Task">Task Title</option>
             <option value="PriorityTask">Priority</option>
             <option value="CreatedAt">Created Date</option>
